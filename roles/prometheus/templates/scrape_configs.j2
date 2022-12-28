@@ -1,0 +1,21 @@
+- job_name: 'self_monitor'
+  metrics_path: /metrics
+  static_configs:
+    - targets:
+      - 'localhost:9100'
+      labels:
+        env: 'self_monitor'
+
+{% for node in prometheus_nodes %}
+- job_name: '{{ node.name }}'
+  metrics_path: /metrics
+  scheme: https
+  static_configs:
+    - targets:
+      - '{{ node.dns }}:9100'
+      labels:
+        env: '{{ node.name }}'
+  basic_auth:
+    username: '{{ prometheus_username }}'
+    password: '{{ node.password }}'
+{% endfor %}

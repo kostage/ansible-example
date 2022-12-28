@@ -1,0 +1,40 @@
+---
+keepass_dbx: "ansible.kdbx"
+keepass_psw: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          35383834616562623763633664316362613663663737643266363137333737646231663862303565
+          6162383866643064353663613535313763326666633235350a313463616562373664326165343861
+          35643762353065326366333235366566363766323036383439623237396163363432633562353139
+          6131613931363238640a653032653133303830343039356166656436663330636631623761323664
+          3135
+
+example_node:
+  username: "{{ lookup('keepass', 'example_node/node', 'username') }}"
+  password: "{{ lookup('keepass', 'example_node/node', 'password') }}"
+  sshkey_save_path: './nodes/example_node/ssh'
+  email: "{{ lookup('keepass', 'example_node/email', 'password') }}"
+  domain_name: "{{ lookup('keepass', 'example_node/domain_name', 'username') }}"
+  cert_dir: '/etc/letsencrypt'
+  ssh_port: 22
+  firewall_rules:
+    - rule: allow
+      port: 9100
+    
+
+dashboard_node:
+  username: "{{ lookup('keepass', 'dashboard_node/node', 'username') }}"
+  password: "{{ lookup('keepass', 'dashboard_node/node', 'password') }}"
+  sshkey_save_path: './nodes/dashboard_node/ssh'
+  email: "{{ lookup('keepass', 'dashboard_node/email', 'password') }}"
+  domain_name: "{{ lookup('keepass', 'dashboard_node/domain_name', 'username') }}"
+  cert_dir: '/etc/letsencrypt'
+  ssh_port: 22
+
+  prometheus:
+    # nodes
+    nodes:
+      - name: 'example_node'
+        password: "{{ lookup('keepass', 'example_node/node', 'password') }}"
+        dns: "{{ lookup('keepass', 'example_node/domain_name', 'username') }}"
+
+telegram_bot_token: "{{ lookup('keepass', 'telegram_bot/token', 'password') }}"

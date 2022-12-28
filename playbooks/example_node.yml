@@ -1,0 +1,111 @@
+- name: Evaluating the authentication agent & adding the key...
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - shell: whoami
+
+- name: Create user with password and ssh key
+  hosts: example_node
+  remote_user: root
+  tasks:
+    - import_role:
+        name: user
+      vars:
+        user_name: '{{ example_node.username }}'
+        user_password: "{{ example_node.password | password_hash('sha512') }}"
+        user_ssh_key_save_path: '{{ example_node.sshkey_save_path }}'
+        user_ssh_key_file: '.ssh/{{ example_node.username }}_id_rsa'
+  ignore_errors: yes
+  ignore_unreachable: yes
+
+- name: Evaluating the authentication agent & adding the key...
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - import_role:
+        name: sshadd
+      vars:
+        sshadd_key_path:  '{{ example_node.sshkey_save_path }}/{{ example_node.username }}_id_rsa'
+
+- name: 'Allow HTTP for letsencrypt challenge'
+  hosts: example_node
+  remote_user: '{{ example_node.username }}'
+  become: yes
+  vars:
+    - ansible_become_password: '{{ example_node.password }}'
+  tasks:
+    - import_role:
+        name: firewall
+      vars:
+        firewall_rules:
+        - rule: allow
+          port: 80
+
+- name: Create letsencrypt cert
+  hosts: example_node
+  remote_user: '{{ example_node.username }}'
+  become: yes
+  vars:
+    - ansible_become_password: '{{ example_node.password }}'
+  tasks:
+    - import_role:
+        name: letsencrypt
+      vars:
+        letsencrypt_domain_name: '{{ example_node.domain_name }}'
+        letsencrypt_username: '{{ example_node.username }}'
+        letsencrypt_email: '{{ example_node.email }}'
+        letsencrypt_dir: '{{ example_node.cert_dir }}'
+
+- name: Tune SSH, install packages, golang, set FW
+  hosts: example_node
+  remote_user: '{{ example_node.username }}'
+  become: yes
+  vars:
+    - ansible_become_password: '{{ example_node.password }}'
+  tasks:
+    - import_role:
+        name: apt
+    - import_role:
+        name: ssh
+      vars:
+        username: '{{ example_node.username }}'
+    - import_role:
+        name: gantsign.golang
+      vars:
+        golang_gopath: '/home/{{ example_node.username }}/go'
+    - import_role:
+        name: firewall
+      vars:
+        firewall_rules: '{{ example_node.firewall_rules }}'
+
+- name: Install Node Exporter
+  hosts: example_node
+  remote_user: '{{ example_node.username }}'
+  become: yes
+  vars:
+    - ansible_become_password: '{{ example_node.password }}'
+  tasks:
+    - import_role:
+        name: nodexp
+      vars:
+        nodexp_security_config:
+          tls_path: '{{ example_node.cert_dir }}'
+          cert_file: '{{ example_node.domain_name }}-fullchain.crt'
+          key_file: '{{ example_node.domain_name }}.key'
+          password: '{{ example_node.password }}'
+
+- name: Switch SSH to non-standard port
+  hosts: example_node
+  remote_user: "{{ example_node.username }}"
+  become: yes
+  vars:
+    - ansible_become_password: '{{ example_node.password }}'
+  tasks:
+    - import_role:
+        name: ssh
+      vars:
+        sshd_options:
+          - option: Port
+            value: "{{ example_node.ssh_port }}"
