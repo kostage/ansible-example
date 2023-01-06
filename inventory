@@ -1,0 +1,5 @@
+[dashboard_node]
+1.2.3.4 ansible_port=22 chat_id=1234567890
+
+[example_node]
+1.2.3.4 ansible_port=22
